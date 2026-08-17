@@ -360,7 +360,7 @@ class ApiService extends ChangeNotifier {
   Future<Map<String, dynamic>> getProfile() async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/users/profile.php'),
+        Uri.parse('$baseUrl/users/profile.php?_t=${DateTime.now().millisecondsSinceEpoch}'),
         headers: _getHeaders(),
       );
       return json.decode(response.body);
@@ -448,7 +448,7 @@ class ApiService extends ChangeNotifier {
   Future<Map<String, dynamic>> getVendorProfile() async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/vendors/profile.php'),
+        Uri.parse('$baseUrl/vendors/profile.php?_t=${DateTime.now().millisecondsSinceEpoch}'),
         headers: _getHeaders(),
       );
       return json.decode(response.body);

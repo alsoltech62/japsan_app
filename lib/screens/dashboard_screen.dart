@@ -218,7 +218,7 @@ class _UserDashboardState extends State<UserDashboard> {
                   borderRadius: BorderRadius.circular(20),
                   image: DecorationImage(
                     image: AssetImage(_banners[index]),
-                    fit: BoxFit.cover,
+                    fit: BoxFit.fill,
                   ),
                   boxShadow: [
                     BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 10, offset: const Offset(0, 4)),
@@ -376,7 +376,7 @@ class _UserDashboardState extends State<UserDashboard> {
           const SizedBox(height: 12),
           Text('$coinBalance JC', style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900)),
           const SizedBox(height: 4),
-          Text('≈ ₹${double.tryParse(cashBalance)?.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500)),
+          Text('≈ ₹${double.tryParse(coinBalance)?.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500)),
           const SizedBox(height: 20),
           InkWell(
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen())),
@@ -657,7 +657,7 @@ class _VendorDashboardState extends State<VendorDashboard> {
                   ),
                   title: Text(tx['user_name'] ?? 'Customer', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.primaryNavy)),
                   subtitle: Text('Bill: ₹${double.tryParse(tx['bill_amount']?.toString()??'0')?.toStringAsFixed(0)}', style: const TextStyle(fontSize: 11, color: AppTheme.textDim)),
-                  trailing: Text('+${double.tryParse(tx['coins_amount']?.toString()??'0')?.toStringAsFixed(0)} JC', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13)),
+                  trailing: Text('-${double.tryParse(tx['coins_amount']?.toString()??'0')?.toStringAsFixed(0)} JC', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 13)),
                 );
               },
             ),
@@ -703,7 +703,7 @@ class _VendorDashboardState extends State<VendorDashboard> {
           const SizedBox(height: 12),
           Text('$coinBalance JC', style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900)),
           const SizedBox(height: 4),
-          Text('≈ ₹$cashBalance', style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500)),
+          Text('≈ ₹${double.tryParse(coinBalance)?.toStringAsFixed(2) ?? "0.00"}', style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500)),
           const SizedBox(height: 20),
           InkWell(
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen())),

@@ -97,21 +97,31 @@ class _WalletScreenState extends State<WalletScreen> {
           if (history.isEmpty)
             const Center(child: Text('No transactions yet', style: TextStyle(color: AppTheme.textDim)))
           else
-            ...history.map((tx) => Card(
-              color: AppTheme.surfaceDark,
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: tx['type'] == 'payment' ? Colors.red : Colors.green,
-                  child: Icon(tx['type'] == 'payment' ? Icons.remove : Icons.add, color: Colors.white),
-                ),
-                title: Text(tx['description'] ?? tx['type'], style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
-                subtitle: Text(tx['created_at'].toString().substring(0, 10), style: const TextStyle(color: AppTheme.textDim)),
-                trailing: Text(
-                  '${tx['type'] == 'payment' ? '-' : '+'}${tx['coins_amount']} JC',
-                  style: TextStyle(color: tx['type'] == 'payment' ? Colors.red : Colors.green, fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-              ),
-            )),
+            ...history.map((tx) {
+                bool isUser = context.read<ApiService>().userRole == 'user';
+                bool isDeduction = ['payment', 'transfer_out', 'admin_debit', 'vendor_withdrawal'].contains(tx['type']);
+                
+                String displayAmount = tx['coins_amount']?.toString() ?? '0';
+                if (tx['type'] == 'payment' && isUser) {
+                  displayAmount = tx['coins_used']?.toString() ?? '0';
+                }
+
+                return Card(
+                  color: AppTheme.surfaceDark,
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: isDeduction ? Colors.red : Colors.green,
+                      child: Icon(isDeduction ? Icons.remove : Icons.add, color: Colors.white),
+                    ),
+                    title: Text(tx['description'] ?? tx['type'], style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+                    subtitle: Text(tx['created_at'].toString().substring(0, 10), style: const TextStyle(color: AppTheme.textDim)),
+                    trailing: Text(
+                      '${isDeduction ? '-' : '+'}$displayAmount JC',
+                      style: TextStyle(color: isDeduction ? Colors.red : Colors.green, fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                  ),
+                );
+            }).toList(),
         ],
       ),
     );
