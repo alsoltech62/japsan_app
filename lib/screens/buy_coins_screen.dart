@@ -68,6 +68,16 @@ class _BuyCoinsScreenState extends State<BuyCoinsScreen> {
   }
 
   void _handlePaymentError(PaymentFailureResponse response) {
+    if (response.code == Razorpay.PAYMENT_CANCELLED) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Payment cancelled by user'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+    
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(

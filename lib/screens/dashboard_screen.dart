@@ -19,6 +19,7 @@ import 'vendor_qr_screen.dart';
 import 'buy_coins_screen.dart';
 import 'notifications_screen.dart';
 import 'vendor_roi_screen.dart';
+import 'user_withdraw_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -289,6 +290,7 @@ class _UserDashboardState extends State<UserDashboard> {
           physics: const NeverScrollableScrollPhysics(),
           childAspectRatio: 0.9,
           children: [
+            _buildQuickAccess(context, Icons.account_balance, 'Withdraw', const UserWithdrawScreen()),
             _buildQuickAccess(context, Icons.card_giftcard_outlined, 'Refer & Earn', const ReferralScreen()),
             _buildQuickAccess(context, Icons.local_offer_outlined, 'Nearby Offers', const NearbyVendorsScreen()),
             _buildQuickAccess(context, Icons.verified_user_outlined, 'KYC', const ProfileScreen()),
@@ -323,14 +325,20 @@ class _UserDashboardState extends State<UserDashboard> {
               separatorBuilder: (c, i) => Divider(color: Colors.grey.shade100, height: 1),
               itemBuilder: (context, index) {
                 final tx = walletData!['transactions'][index];
+                bool isDeduction = ['payment', 'transfer_out', 'admin_debit', 'vendor_withdrawal'].contains(tx['type']);
+                String displayAmount = tx['coins_amount']?.toString() ?? '0';
+                if (tx['type'] == 'payment') {
+                  displayAmount = tx['coins_used']?.toString() ?? '0';
+                }
+
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: Colors.grey.shade100,
-                    child: const Text('💳', style: TextStyle(fontSize: 18)),
+                    backgroundColor: isDeduction ? Colors.red.withAlpha(20) : Colors.green.withAlpha(20),
+                    child: Icon(isDeduction ? Icons.remove : Icons.add, color: isDeduction ? Colors.red : Colors.green, size: 18),
                   ),
-                  title: Text(tx['vendor_name'] ?? tx['user_name'] ?? 'User', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.primaryNavy)),
-                  subtitle: Text('Bill: ₹${double.tryParse(tx['bill_amount']?.toString()??'0')?.toStringAsFixed(0)}', style: const TextStyle(fontSize: 11, color: AppTheme.textDim)),
-                  trailing: Text('+${double.tryParse(tx['coins_amount']?.toString()??'0')?.toStringAsFixed(0)} JC', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13)),
+                  title: Text(tx['description'] ?? tx['type'] ?? 'Transaction', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.primaryNavy), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  subtitle: Text(tx['created_at']?.toString().substring(0, 10) ?? '', style: const TextStyle(fontSize: 11, color: AppTheme.textDim)),
+                  trailing: Text('${isDeduction ? '-' : '+'}${double.tryParse(displayAmount)?.toStringAsFixed(2)} JC', style: TextStyle(color: isDeduction ? Colors.red : Colors.green, fontWeight: FontWeight.bold, fontSize: 13)),
                 );
               },
             ),
@@ -650,14 +658,17 @@ class _VendorDashboardState extends State<VendorDashboard> {
               separatorBuilder: (c, i) => Divider(color: Colors.grey.shade100, height: 1),
               itemBuilder: (context, index) {
                 final tx = transactions[index];
+                bool isDeduction = ['payment', 'transfer_out', 'admin_debit', 'vendor_withdrawal'].contains(tx['type']);
+                String displayAmount = tx['coins_amount']?.toString() ?? '0';
+
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: Colors.grey.shade100,
-                    child: const Text('💳', style: TextStyle(fontSize: 18)),
+                    backgroundColor: isDeduction ? Colors.red.withAlpha(20) : Colors.green.withAlpha(20),
+                    child: Icon(isDeduction ? Icons.remove : Icons.add, color: isDeduction ? Colors.red : Colors.green, size: 18),
                   ),
-                  title: Text(tx['user_name'] ?? 'Customer', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.primaryNavy)),
-                  subtitle: Text('Bill: ₹${double.tryParse(tx['bill_amount']?.toString()??'0')?.toStringAsFixed(0)}', style: const TextStyle(fontSize: 11, color: AppTheme.textDim)),
-                  trailing: Text('-${double.tryParse(tx['coins_amount']?.toString()??'0')?.toStringAsFixed(0)} JC', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 13)),
+                  title: Text(tx['description'] ?? tx['type'] ?? 'Transaction', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.primaryNavy), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  subtitle: Text(tx['created_at']?.toString().substring(0, 10) ?? '', style: const TextStyle(fontSize: 11, color: AppTheme.textDim)),
+                  trailing: Text('${isDeduction ? '-' : '+'}${double.tryParse(displayAmount)?.toStringAsFixed(2)} JC', style: TextStyle(color: isDeduction ? Colors.red : Colors.green, fontWeight: FontWeight.bold, fontSize: 13)),
                 );
               },
             ),

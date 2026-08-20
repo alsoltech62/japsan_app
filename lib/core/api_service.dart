@@ -344,6 +344,33 @@ class ApiService extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> getUserWithdrawals() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/users/withdraw.php'),
+        headers: _getHeaders(),
+      );
+      return json.decode(response.body);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> requestUserWithdraw(
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/users/withdraw.php'),
+        headers: _getHeaders(),
+        body: json.encode(data),
+      );
+      return json.decode(response.body);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> registerVendor(Map<String, dynamic> data) async {
     try {
       final response = await http.post(

@@ -8,6 +8,8 @@ import '../widgets/app_loading.dart';
 import 'app_lock_screen.dart';
 import 'setup_pin_screen.dart';
 import 'package:flutter/services.dart';
+import 'package:app_links/app_links.dart';
+import 'dart:async';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -24,11 +26,58 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _otpSent = false;
   String _userType = 'user'; // 'user' or 'vendor'
   bool _isReferralLocked = false;
+  late AppLinks _appLinks;
+  StreamSubscription<Uri>? _linkSubscription;
 
   @override
   void initState() {
     super.initState();
     _checkReferralCode();
+    _initAppLinks();
+  }
+
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    _phoneController.dispose();
+    _otpController.dispose();
+    _nameController.dispose();
+    _referralController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initAppLinks() async {
+    _appLinks = AppLinks();
+
+    // Check initial link if app was in cold state (terminated)
+    try {
+      final Uri? initialUri = await _appLinks.getInitialLink();
+      if (initialUri != null) {
+        _handleDeepLink(initialUri);
+      }
+    } catch (e) {
+      debugPrint("Failed to get initial link: $e");
+    }
+
+    // Handle link when app is in warm state (foreground or background)
+    _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
+      _handleDeepLink(uri);
+    }, onError: (err) {
+      debugPrint("Failed to handle deep link: $err");
+    });
+  }
+
+  void _handleDeepLink(Uri uri) {
+    if (uri.queryParameters.containsKey('ref')) {
+      final refCode = uri.queryParameters['ref'];
+      if (refCode != null && refCode.isNotEmpty && mounted) {
+        setState(() {
+          _referralController.text = refCode;
+          _isReferralLocked = true;
+          _userType = 'user';
+        });
+      }
+    }
   }
 
   Future<void> _checkReferralCode() async {

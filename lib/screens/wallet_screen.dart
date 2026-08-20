@@ -153,9 +153,15 @@ class _WalletScreenState extends State<WalletScreen> {
           _buildWalletRow(Icons.lock_clock, '90 Days Lock Wallet', multiWallet['lock_90d_wallet'], false, 'Non-Withdrawable (Unlocks in 90 Days)', Colors.orange),
           _buildWalletRow(Icons.group_add, 'Referral Reward Wallet', multiWallet['referral_wallet'], false, 'Non-Withdrawable', Colors.green),
           _buildWalletRow(Icons.card_giftcard, 'Cashback Wallet', multiWallet['cashback_wallet'], false, 'Non-Withdrawable', Colors.purple),
+          _buildWalletRow(Icons.stars, 'Bonus Wallet', multiWallet['bonus_wallet'], false, 'Non-Withdrawable', Colors.amber),
           
-          if (!isVendor)
+          if (!isVendor) ...[
             _buildWalletRow(Icons.account_tree, 'Level Income Wallet', multiWallet['level_income_wallet'], false, 'Non-Withdrawable', Colors.redAccent),
+            if ((multiWallet['staking_wallet'] ?? 0) > 0)
+              _buildWalletRow(Icons.savings, 'Staking Wallet', multiWallet['staking_wallet'], false, 'Non-Withdrawable (Staked)', Colors.teal),
+            if ((multiWallet['pending_wallet'] ?? 0) > 0)
+              _buildWalletRow(Icons.hourglass_empty, 'Pending Wallet', multiWallet['pending_wallet'], false, 'Non-Withdrawable (Pending)', Colors.grey),
+          ],
           
           if ((multiWallet['vendor_settlement_wallet'] ?? 0) > 0)
             _buildWalletRow(Icons.store, 'Vendor Settlement Wallet', multiWallet['vendor_settlement_wallet'], true, 'Withdrawable (Purchased JC)', Colors.orange),
