@@ -6,6 +6,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../core/api_service.dart';
 import '../core/theme.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 class UserScanPayScreen extends StatefulWidget {
   const UserScanPayScreen({super.key});
@@ -24,13 +25,20 @@ class _UserScanPayScreenState extends State<UserScanPayScreen> {
   Map<String, dynamic>? _vendorDetails;
   Map<String, dynamic>? _userDetails;
   Map<String, dynamic>? _wallet;
+  double _redemptionRate = 1.0;
   bool _isLoading = false;
   bool _showScanner = false;
   final MobileScannerController _scannerController = MobileScannerController();
+  late Razorpay _razorpay;
 
   @override
   void initState() {
     super.initState();
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = context.read<ApiService>().userProfile;
       if (user?['name'] == null || user!['name'].toString().isEmpty || user['city'] == null || user['city'].toString().isEmpty) {
@@ -39,8 +47,60 @@ class _UserScanPayScreenState extends State<UserScanPayScreen> {
           backgroundColor: Colors.red,
         ));
         Navigator.pop(context);
+        Navigator.pop(context);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _razorpay.clear();
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    setState(() => _isLoading = true);
+    final api = context.read<ApiService>();
+    final payload = {
+      'vendor_id': _vendorDetails!['id'],
+      'bill_amount': double.tryParse(_billAmountCtrl.text) ?? 0,
+      'coins_to_use': double.tryParse(_coinsCtrl.text) ?? 0,
+      'payment_method': 'online',
+      'pin': _pinCtrl.text,
+      'razorpay_payment_id': response.paymentId,
+      'razorpay_order_id': response.orderId,
+      'razorpay_signature': response.signature,
+    };
+    final res = await api.processUserPay(payload);
+    setState(() => _isLoading = false);
+    
+    if (res['success'] == true) {
+      if(mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment Successful!'), backgroundColor: Colors.green));
+        Navigator.pop(context);
+      }
+    } else {
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Payment failed'), backgroundColor: Colors.red));
+    }
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    if (response.code == Razorpay.PAYMENT_CANCELLED) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment cancelled by user'), backgroundColor: Colors.orange));
+      return;
+    }
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Razorpay Error'),
+        content: Text('Code: ${response.code}\nMessage: ${response.message}'),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK'))],
+      ),
+    );
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('External Wallet: ${response.walletName}')));
   }
 
   Future<void> _handleScan(String query) async {
@@ -58,6 +118,7 @@ class _UserScanPayScreenState extends State<UserScanPayScreen> {
         if (data['vendor'] != null) {
           _vendorDetails = data['vendor'];
           _userDetails = null;
+          _redemptionRate = (data['redemption_rate'] as num?)?.toDouble() ?? 1.0;
         } else if (data['user'] != null) {
           _userDetails = data['user'];
           _vendorDetails = null;
@@ -83,24 +144,64 @@ class _UserScanPayScreenState extends State<UserScanPayScreen> {
       return;
     }
     setState(() => _isLoading = true);
-    final api = context.read<ApiService>();
-    final payload = {
-      'vendor_id': _vendorDetails!['id'],
-      'bill_amount': double.tryParse(_billAmountCtrl.text) ?? 0,
-      'coins_to_use': double.tryParse(_coinsCtrl.text) ?? 0,
-      'payment_method': 'online',
-      'pin': _pinCtrl.text
-    };
-    final res = await api.processUserPay(payload);
-    setState(() => _isLoading = false);
     
-    if (res['success'] == true) {
-      if(mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment Successful!'), backgroundColor: Colors.green));
-        Navigator.pop(context);
+    final billAmt = double.tryParse(_billAmountCtrl.text) ?? 0;
+    final coinsToUse = double.tryParse(_coinsCtrl.text) ?? 0;
+    final coinDiscount = coinsToUse * _redemptionRate;
+    var cashToPay = billAmt - coinDiscount;
+    if (cashToPay < 0) cashToPay = 0;
+
+    if (cashToPay > 0 && cashToPay < 1) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Minimum online payment via Razorpay must be at least ₹1. Please adjust your coins.')));
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    final api = context.read<ApiService>();
+
+    if (cashToPay > 0) {
+      final orderRes = await api.createRazorpayOrder({'amount_inr': cashToPay});
+      setState(() => _isLoading = false);
+      if (orderRes['success'] == true) {
+        final orderData = orderRes['data'];
+        final user = context.read<ApiService>().userProfile;
+        var options = {
+          'key': 'rzp_live_TN8KciymYkApmH',
+          'amount': orderData['amount'],
+          'name': 'Japsan Pay',
+          'description': 'Payment to Vendor',
+          'order_id': orderData['order_id'],
+          'prefill': {'contact': user?['phone'] ?? '', 'email': ''},
+          'theme': {'color': '#f97316'},
+        };
+        try {
+          _razorpay.open(options);
+        } catch (e) {
+          debugPrint('Error launching Razorpay: $e');
+        }
+      } else {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(orderRes['message'] ?? 'Failed to create payment order'), backgroundColor: Colors.red));
       }
     } else {
-      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Payment failed'), backgroundColor: Colors.red));
+      // Full coin payment
+      final payload = {
+        'vendor_id': _vendorDetails!['id'],
+        'bill_amount': billAmt,
+        'coins_to_use': coinsToUse,
+        'payment_method': 'online',
+        'pin': _pinCtrl.text
+      };
+      final res = await api.processUserPay(payload);
+      setState(() => _isLoading = false);
+      
+      if (res['success'] == true) {
+        if(mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment Successful!'), backgroundColor: Colors.green));
+          Navigator.pop(context);
+        }
+      } else {
+        if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'Payment failed'), backgroundColor: Colors.red));
+      }
     }
   }
 
@@ -427,6 +528,45 @@ class _UserScanPayScreenState extends State<UserScanPayScreen> {
                   child: const Text('MAX', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
                 )
               ),
+            ),
+            const SizedBox(height: 12),
+            AnimatedBuilder(
+              animation: Listenable.merge([_billAmountCtrl, _coinsCtrl]),
+              builder: (context, _) {
+                final billAmt = double.tryParse(_billAmountCtrl.text) ?? 0;
+                final coinsToUse = double.tryParse(_coinsCtrl.text) ?? 0;
+                final discount = coinsToUse * _redemptionRate;
+                var cash = billAmt - discount;
+                if (cash < 0) cash = 0;
+                
+                if (billAmt == 0 && coinsToUse == 0) return const SizedBox.shrink();
+
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryGold.withAlpha(20),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppTheme.primaryGold.withAlpha(50))
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Coin Discount: ₹${discount.toStringAsFixed(2)}', style: const TextStyle(color: Colors.green, fontSize: 13)),
+                          const SizedBox(height: 4),
+                          Text('To Pay via Razorpay: ₹${cash.toStringAsFixed(2)}', style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 14)),
+                        ],
+                      ),
+                      if (cash > 0 && cash < 1)
+                        const Icon(Icons.error_outline, color: Colors.red, size: 20)
+                      else if (cash == 0 && billAmt > 0)
+                        const Icon(Icons.check_circle, color: Colors.green, size: 20)
+                    ],
+                  ),
+                );
+              }
             ),
           ],
           

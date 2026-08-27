@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:facebook_app_events/facebook_app_events.dart';
 import 'core/theme.dart';
 import 'core/api_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/app_lock_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Log Facebook activated app event
+  await FacebookAppEvents().activateApp();
+  
   runApp(
     MultiProvider(
       providers: [

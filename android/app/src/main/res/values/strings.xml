@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">JapsanPay</string>
+    <string name="facebook_app_id">1602604194570882</string>
+    <string name="fb_login_protocol_scheme">fb1602604194570882</string>
+    <string name="facebook_client_token">a7ecb40f8c778882e5bfc3d7aa66b713</string>
+</resources>

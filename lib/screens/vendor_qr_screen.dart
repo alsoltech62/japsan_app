@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/api_service.dart';
 import '../core/theme.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 class VendorQrScreen extends StatefulWidget {
   const VendorQrScreen({super.key});
@@ -86,8 +87,13 @@ class _VendorQrScreenState extends State<VendorQrScreen> {
                         ),
                         // Since we don't have a QR package installed by default, we'll display a fallback or if the API gives an image URL.
                         // Let's assume the API returns a 'qr_image_url' or we just show an icon for now.
-                        child: qrData?['qr_image_url'] != null 
-                            ? Image.network(qrData!['qr_image_url'], width: 220, height: 220)
+                        child: qrData?['qr_data'] != null 
+                            ? QrImageView(
+                                data: qrData!['qr_data'],
+                                version: QrVersions.auto,
+                                size: 220.0,
+                                foregroundColor: Colors.black,
+                              )
                             : const Icon(Icons.qr_code_2, size: 220, color: Colors.black),
                       ),
                       const SizedBox(height: 32),

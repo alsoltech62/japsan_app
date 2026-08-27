@@ -208,8 +208,9 @@ class ApiService extends ChangeNotifier {
 
   Future<Map<String, dynamic>> scanVendorQR(String vendorId) async {
     try {
+      final encoded = Uri.encodeComponent(vendorId);
       final response = await http.get(
-        Uri.parse('$baseUrl/qr/scan.php?vendor_id=$vendorId'),
+        Uri.parse('$baseUrl/qr/scan.php?vendor_id=$encoded'),
         headers: _getHeaders(),
       );
       return json.decode(response.body);
@@ -225,7 +226,11 @@ class ApiService extends ChangeNotifier {
         headers: _getHeaders(),
         body: json.encode(data),
       );
-      return json.decode(response.body);
+      final res = json.decode(response.body);
+      if (res['success'] == true) {
+        await refreshProfile();
+      }
+      return res;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -242,7 +247,11 @@ class ApiService extends ChangeNotifier {
         headers: _getHeaders(),
         body: json.encode(data),
       );
-      return json.decode(response.body);
+      final res = json.decode(response.body);
+      if (res['success'] == true) {
+        await refreshProfile();
+      }
+      return res;
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -453,7 +462,11 @@ class ApiService extends ChangeNotifier {
       );
       
       try {
-        return json.decode(response.body);
+        final res = json.decode(response.body);
+        if (res['success'] == true) {
+          await refreshProfile();
+        }
+        return res;
       } catch (e) {
         return {'success': false, 'message': 'Server returned an invalid response (Status: ${response.statusCode}).'};
       }

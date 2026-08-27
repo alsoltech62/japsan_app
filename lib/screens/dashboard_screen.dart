@@ -17,6 +17,7 @@ import 'vendor_withdraw_screen.dart';
 import 'vendor_scan_customer_screen.dart';
 import 'vendor_qr_screen.dart';
 import 'buy_coins_screen.dart';
+import 'cash_wallet_screen.dart';
 import 'notifications_screen.dart';
 import 'vendor_roi_screen.dart';
 import 'user_withdraw_screen.dart';
@@ -382,9 +383,34 @@ class _UserDashboardState extends State<UserDashboard> {
             ],
           ),
           const SizedBox(height: 12),
-          Text('$coinBalance JC', style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 4),
-          Text('≈ ₹${double.tryParse(coinBalance)?.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Japsan Coins', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+                  Text('$coinBalance JC', style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
+                ],
+              ),
+              InkWell(
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CashWalletScreen())),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Row(
+                      children: [
+                        Text('Cash Wallet', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+                        SizedBox(width: 4),
+                        Icon(Icons.open_in_new, color: Colors.white70, size: 12),
+                      ],
+                    ),
+                    Text('₹$cashBalance', style: const TextStyle(color: AppTheme.premiumGold, fontSize: 26, fontWeight: FontWeight.w900)),
+                  ],
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 20),
           InkWell(
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen())),
@@ -405,7 +431,10 @@ class _UserDashboardState extends State<UserDashboard> {
 
   Widget _buildActionItem(BuildContext context, IconData icon, String label, Widget screen, Color color) {
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => screen)),
+      onTap: () async {
+        await Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+        _fetchBalance();
+      },
       child: Column(
         children: [
           Container(
@@ -426,7 +455,10 @@ class _UserDashboardState extends State<UserDashboard> {
 
   Widget _buildQuickAccess(BuildContext context, IconData icon, String label, Widget screen) {
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => screen)),
+      onTap: () async {
+        await Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+        _fetchBalance();
+      },
       child: Column(
         children: [
           Icon(icon, color: AppTheme.textSecondary, size: 26),
@@ -543,6 +575,7 @@ class _VendorDashboardState extends State<VendorDashboard> {
             _buildQuickAccess(context, Icons.person_outline, 'Profile', const ProfileScreen()),
             _buildQuickAccess(context, Icons.point_of_sale, 'Bill Customer', const VendorScanCustomerScreen()),
             _buildQuickAccess(context, Icons.qr_code, 'Show QR', const VendorQrScreen()),
+            _buildQuickAccess(context, Icons.account_balance_wallet, 'Buy Coins', const BuyCoinsScreen()),
             _buildQuickAccess(context, Icons.account_balance, 'Withdraw', const VendorWithdrawScreen()),
             _buildQuickAccess(context, Icons.settings_outlined, 'Rewards', const VendorRewardSettingsScreen()),
             _buildQuickAccess(context, Icons.local_offer_outlined, 'Offers', const VendorOffersScreen()),
@@ -712,9 +745,34 @@ class _VendorDashboardState extends State<VendorDashboard> {
             ],
           ),
           const SizedBox(height: 12),
-          Text('$coinBalance JC', style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 4),
-          Text('≈ ₹${double.tryParse(coinBalance)?.toStringAsFixed(2) ?? "0.00"}', style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Japsan Coins', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+                  Text('$coinBalance JC', style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
+                ],
+              ),
+              InkWell(
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CashWalletScreen())),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Row(
+                      children: [
+                        Text('Cash Wallet', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+                        SizedBox(width: 4),
+                        Icon(Icons.open_in_new, color: Colors.white70, size: 12),
+                      ],
+                    ),
+                    Text('₹$cashBalance', style: const TextStyle(color: AppTheme.premiumGold, fontSize: 26, fontWeight: FontWeight.w900)),
+                  ],
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 20),
           InkWell(
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen())),
@@ -735,7 +793,10 @@ class _VendorDashboardState extends State<VendorDashboard> {
 
   Widget _buildQuickAccess(BuildContext context, IconData icon, String label, Widget screen) {
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => screen)),
+      onTap: () async {
+        await Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+        _fetchData();
+      },
       child: Column(
         children: [
           Container(

@@ -23,7 +23,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _fetchNotifications() async {
     final res = await context.read<ApiService>().getNotifications();
     if (res['success'] == true) {
-      if (mounted) setState(() => _notifications = res['data'] ?? []);
+      if (mounted) setState(() => _notifications = res['data']?['notifications'] ?? []);
     }
     if (mounted) setState(() => _isLoading = false);
   }

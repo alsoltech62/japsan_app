@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -19,7 +20,23 @@ class _VendorScanCustomerScreenState extends State<VendorScanCustomerScreen> {
   
   bool isLoading = false;
   bool _showScanner = false;
+  Map<String, dynamic>? _customerDetails;
   final MobileScannerController _scannerController = MobileScannerController();
+
+  Future<void> _fetchCustomerDetails(String query) async {
+    if (query.isEmpty) return;
+    setState(() => isLoading = true);
+    final res = await context.read<ApiService>().scanVendorQR(query);
+    setState(() {
+      isLoading = false;
+      if (res['success'] == true && res['data'] != null && res['data']['user'] != null) {
+        _customerDetails = res['data']['user'];
+      } else {
+        _customerDetails = null;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res['message'] ?? 'User not found')));
+      }
+    });
+  }
 
   Future<void> _processPayment() async {
     if (userPhoneCtrl.text.isEmpty || billAmountCtrl.text.isEmpty) {
@@ -60,15 +77,19 @@ class _VendorScanCustomerScreenState extends State<VendorScanCustomerScreen> {
         // If the QR contains JSON { user_id: '...', type: '...' } or just the user's phone, we can handle it.
         // For simplicity, let's just populate the field with whatever we get.
         // In real app, we might parse JSON.
+        String scannedId = '';
         try {
-          // If it's the JSON from My QR
-          // qrValue = jsonEncode({'user_id': user?['id'], 'type': 'japsan_user_qr'});
-          // but we actually need phone. If we don't have phone, backend should support user_id. 
-          // Assuming userPhoneCtrl can accept user_id or phone.
-          userPhoneCtrl.text = barcode.rawValue!; 
+          final data = jsonDecode(barcode.rawValue!);
+          if (data['user_id'] != null) {
+            scannedId = data['user_id'].toString();
+          } else {
+            scannedId = barcode.rawValue!;
+          }
         } catch (e) {
-          userPhoneCtrl.text = barcode.rawValue!;
+          scannedId = barcode.rawValue!;
         }
+        userPhoneCtrl.text = scannedId;
+        _fetchCustomerDetails(scannedId);
         break;
       }
     }
@@ -134,17 +155,56 @@ class _VendorScanCustomerScreenState extends State<VendorScanCustomerScreen> {
             const Text('Or Enter Details Manually', style: TextStyle(color: AppTheme.textDim)),
             const SizedBox(height: 24),
 
-            TextField(
-              controller: userPhoneCtrl,
-              keyboardType: TextInputType.text,
-              style: const TextStyle(color: AppTheme.textPrimary),
-              decoration: InputDecoration(
-                labelText: 'Customer Phone or ID',
-                filled: true,
-                fillColor: AppTheme.surfaceDark,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: userPhoneCtrl,
+                    keyboardType: TextInputType.text,
+                    style: const TextStyle(color: AppTheme.textPrimary),
+                    decoration: InputDecoration(
+                      labelText: 'Customer Phone or ID',
+                      filled: true,
+                      fillColor: AppTheme.surfaceDark,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: isLoading ? null : () => _fetchCustomerDetails(userPhoneCtrl.text),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryGold,
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                  ),
+                  child: const Text('Verify'),
+                ),
+              ],
             ),
+            if (_customerDetails != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: Colors.green.withAlpha(30), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.green)),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.green, size: 30),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_customerDetails!['name'] ?? 'Unknown User', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text('${_customerDetails!['phone']} • ${_customerDetails!['city'] ?? ''}', style: const TextStyle(color: AppTheme.textDim, fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             TextField(
               controller: billAmountCtrl,

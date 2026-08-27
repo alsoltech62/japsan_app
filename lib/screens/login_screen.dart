@@ -268,18 +268,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       prefixIcon: Icon(Icons.person),
                     ),
                   ).animate().fade(delay: 450.ms).slideX(begin: 0.1),
-                  if (_isReferralLocked) ...[
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: _referralController,
-                      enabled: false,
-                      style: const TextStyle(color: Colors.grey, fontSize: 16),
-                      decoration: const InputDecoration(
-                        labelText: 'Referral Code (Applied via Link)',
-                        prefixIcon: Icon(Icons.local_activity, color: AppTheme.primaryGold),
-                      ),
-                    ).animate().fade(delay: 500.ms).slideX(begin: 0.1),
-                  ],
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _referralController,
+                    enabled: !_isReferralLocked && !isLoading,
+                    style: TextStyle(color: _isReferralLocked ? Colors.grey : AppTheme.textPrimary, fontSize: 16),
+                    decoration: InputDecoration(
+                      labelText: _isReferralLocked ? 'Referral Code (Applied)' : 'Referral Code (Optional)',
+                      prefixIcon: const Icon(Icons.local_activity, color: AppTheme.primaryGold),
+                    ),
+                  ).animate().fade(delay: 500.ms).slideX(begin: 0.1),
                 ],
                 
                 if (_otpSent) ...[

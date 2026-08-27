@@ -52,24 +52,6 @@ class _NearbyVendorsScreenState extends State<NearbyVendorsScreen> {
       }
     }
 
-    if (vendors.isEmpty) {
-      setState(() {
-        vendors.add({
-          'business_name': 'Japsan SuperMart (Demo)',
-          'business_address': 'Main Market Area',
-          'city': 'Demo City',
-          'owner_name': 'Demo Vendor',
-          'distance': '1.2',
-          'cashback_percent': '10',
-          'visiting_card_photo': 'https://placehold.co/600x400/png?text=Visiting+Card',
-          'latest_offer': {
-            'title': 'Mega Diwali Sale',
-            'description': 'Get 50% Off on Groceries and daily essentials up to ₹500. Use coins to get additional discounts!'
-          }
-        });
-      });
-    }
-
     setState(() => isLoading = false);
   }
 
