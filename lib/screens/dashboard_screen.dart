@@ -198,14 +198,17 @@ class _UserDashboardState extends State<UserDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final balance = walletData?['wallet']?['coin_balance'] ?? 0;
-    final cashBalance = walletData?['wallet']?['cash_wallet_balance'] ?? 0;
+    final balanceStr = walletData?['wallet']?['coin_balance']?.toString() ?? '0';
+    final balance = double.tryParse(balanceStr) ?? 0.0;
+    final rateStr = walletData?['redemption_rate']?.toString() ?? '0.7';
+    final rate = double.tryParse(rateStr) ?? 0.7;
+    final estValue = (balance * rate).toStringAsFixed(2);
     
     return ListView(
       padding: const EdgeInsets.all(16),
       physics: const BouncingScrollPhysics(),
       children: [
-        _buildUserBalanceCard(context, '$balance', '$cashBalance'),
+        _buildUserBalanceCard(context, '$balanceStr', estValue),
         const SizedBox(height: 24),
         // Main Promotional Banner
         SizedBox(
@@ -393,21 +396,17 @@ class _UserDashboardState extends State<UserDashboard> {
                   Text('$coinBalance JC', style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900)),
                 ],
               ),
-              InkWell(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CashWalletScreen())),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    const Row(
-                      children: [
-                        Text('Cash Wallet', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
-                        SizedBox(width: 4),
-                        Icon(Icons.open_in_new, color: Colors.white70, size: 12),
-                      ],
-                    ),
-                    Text('₹$cashBalance', style: const TextStyle(color: AppTheme.premiumGold, fontSize: 26, fontWeight: FontWeight.w900)),
-                  ],
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  const Row(
+                    children: [
+                      Text('Estimated Value', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+                      SizedBox(width: 4),
+                    ],
+                  ),
+                  Text('₹$cashBalance', style: const TextStyle(color: AppTheme.premiumGold, fontSize: 26, fontWeight: FontWeight.w900)),
+                ],
               ),
             ],
           ),

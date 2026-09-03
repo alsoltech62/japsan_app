@@ -475,6 +475,18 @@ class ApiService extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> getPackages() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/transactions/packages.php'),
+        headers: _getHeaders(),
+      );
+      return json.decode(response.body);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> getTransactions({Map<String, String>? params}) async {
     try {
       final uri = Uri.parse('$baseUrl/transactions/history.php').replace(queryParameters: params);

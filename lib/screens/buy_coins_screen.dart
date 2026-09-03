@@ -13,13 +13,8 @@ class BuyCoinsScreen extends StatefulWidget {
 }
 
 class _BuyCoinsScreenState extends State<BuyCoinsScreen> {
-  final List<Map<String, dynamic>> packages = [
-    {'coins': 100, 'bonus': 0, 'label': 'Starter', 'popular': false},
-    {'coins': 500, 'bonus': 0, 'label': 'Regular', 'popular': false},
-    {'coins': 1000, 'bonus': 100, 'label': 'Popular', 'popular': true},
-    {'coins': 2000, 'bonus': 200, 'label': 'Pro', 'popular': false},
-    {'coins': 5000, 'bonus': 500, 'label': 'Premium', 'popular': false},
-  ];
+  List<Map<String, dynamic>> packages = [];
+  bool _isLoadingPackages = true;
 
   Map<String, dynamic>? _selectedPkg;
   final _customCtrl = TextEditingController();
@@ -29,6 +24,9 @@ class _BuyCoinsScreenState extends State<BuyCoinsScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadPackages();
+    });
     _razorpay = Razorpay();
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
@@ -39,6 +37,18 @@ class _BuyCoinsScreenState extends State<BuyCoinsScreen> {
   void dispose() {
     super.dispose();
     _razorpay.clear();
+  }
+
+  Future<void> _loadPackages() async {
+    final res = await context.read<ApiService>().getPackages();
+    if (res['success'] == true && mounted) {
+      setState(() {
+        packages = List<Map<String, dynamic>>.from(res['data']);
+        _isLoadingPackages = false;
+      });
+    } else if (mounted) {
+      setState(() => _isLoadingPackages = false);
+    }
   }
 
   void _handlePaymentSuccess(PaymentSuccessResponse response) async {
@@ -100,9 +110,9 @@ class _BuyCoinsScreenState extends State<BuyCoinsScreen> {
   }
 
   int get _coins => _selectedPkg != null
-      ? _selectedPkg!['coins']
+      ? int.tryParse(_selectedPkg!['coins'].toString()) ?? 0
       : (int.tryParse(_customCtrl.text) ?? 0);
-  int get _bonus => _selectedPkg != null ? _selectedPkg!['bonus'] : 0;
+  int get _bonus => _selectedPkg != null ? (int.tryParse(_selectedPkg!['bonus'].toString()) ?? 0) : 0;
   int get _total => _coins + _bonus;
 
   Future<void> _buyCoins() async {
@@ -247,109 +257,118 @@ class _BuyCoinsScreenState extends State<BuyCoinsScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.2,
-            ),
-            itemCount: packages.length,
-            itemBuilder: (ctx, i) {
-              final pkg = packages[i];
-              final isSelected = _selectedPkg == pkg;
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedPkg = pkg;
-                    _customCtrl.clear();
-                  });
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppTheme.primaryGold.withAlpha(20)
-                        : AppTheme.surfaceDark,
-                    border: Border.all(
-                      color: isSelected
-                          ? AppTheme.primaryGold
-                          : Colors.transparent,
-                      width: 2,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Stack(
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            '${pkg['coins']} 🪙',
-                            style: const TextStyle(
-                              color: AppTheme.primaryNavy,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          if (pkg['bonus'] > 0)
-                            Text(
-                              '+${pkg['bonus']} bonus!',
-                              style: const TextStyle(
-                                color: Colors.green,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '= ₹${pkg['coins']}',
-                            style: const TextStyle(
-                              color: AppTheme.textDim,
-                              fontSize: 12,
-                            ),
-                          ),
-                          Text(
-                            pkg['label'],
-                            style: const TextStyle(
-                              color: AppTheme.textDim,
-                              fontSize: 10,
-                            ),
-                          ),
-                        ],
+          _isLoadingPackages
+              ? const Center(child: CircularProgressIndicator())
+              : packages.isEmpty
+                  ? const Center(child: Text('No packages available'))
+                  : GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 1.2,
                       ),
-                      if (pkg['popular'] == true)
-                        Positioned(
-                          top: 0,
-                          right: 0,
+                      itemCount: packages.length,
+                      itemBuilder: (ctx, i) {
+                        final pkg = packages[i];
+                        final isSelected = _selectedPkg == pkg;
+                        final coins = pkg['coins'].toString();
+                        final bonus = int.tryParse(pkg['bonus'].toString()) ?? 0;
+                        final price = pkg['price_inr']?.toString() ?? coins;
+                        final popular = pkg['is_popular']?.toString() == '1' || pkg['is_popular'] == true;
+                        
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedPkg = pkg;
+                              _customCtrl.clear();
+                            });
+                          },
                           child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
+                            padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.green,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Text(
-                              'POPULAR',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 8,
-                                fontWeight: FontWeight.bold,
+                              color: isSelected
+                                  ? AppTheme.primaryGold.withAlpha(20)
+                                  : AppTheme.surfaceDark,
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppTheme.primaryGold
+                                    : Colors.transparent,
+                                width: 2,
                               ),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Stack(
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      '$coins 🪙',
+                                      style: const TextStyle(
+                                        color: AppTheme.primaryNavy,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    if (bonus > 0)
+                                      Text(
+                                        '+$bonus bonus!',
+                                        style: const TextStyle(
+                                          color: Colors.green,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '= ₹$price',
+                                      style: const TextStyle(
+                                        color: AppTheme.textDim,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    Text(
+                                      pkg['label'] ?? 'Package',
+                                      style: const TextStyle(
+                                        color: AppTheme.textDim,
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (popular)
+                                  Positioned(
+                                    top: 0,
+                                    right: 0,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Text(
+                                        'POPULAR',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
-                        ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
+                        );
+                      },
+                    ),
 
           const SizedBox(height: 24),
           const Text(

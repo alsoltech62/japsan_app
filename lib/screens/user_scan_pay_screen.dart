@@ -160,7 +160,13 @@ class _UserScanPayScreenState extends State<UserScanPayScreen> {
     final api = context.read<ApiService>();
 
     if (cashToPay > 0) {
-      final orderRes = await api.createRazorpayOrder({'amount_inr': cashToPay});
+      final orderRes = await api.createRazorpayOrder({
+        'amount_inr': cashToPay,
+        'vendor_id': _vendorDetails!['id'],
+        'bill_amount': billAmt,
+        'coins_to_use': coinsToUse,
+        'pin': _pinCtrl.text
+      });
       setState(() => _isLoading = false);
       if (orderRes['success'] == true) {
         final orderData = orderRes['data'];

@@ -149,13 +149,12 @@ class _WalletScreenState extends State<WalletScreen> {
               ],
             ),
           ),
-          _buildWalletRow(Icons.account_balance_wallet, 'Main Wallet (JC)', multiWallet['main_wallet'], true, 'Withdrawable (Purchased JC)', Colors.blue),
-          _buildWalletRow(Icons.lock_clock, '90 Days Lock Wallet', multiWallet['lock_90d_wallet'], false, 'Non-Withdrawable (Unlocks in 90 Days)', Colors.orange),
-          _buildWalletRow(Icons.group_add, 'Referral Reward Wallet', multiWallet['referral_wallet'], false, 'Non-Withdrawable', Colors.green),
-          _buildWalletRow(Icons.card_giftcard, 'Cashback Wallet', multiWallet['cashback_wallet'], false, 'Non-Withdrawable', Colors.purple),
-          _buildWalletRow(Icons.stars, 'Bonus Wallet', multiWallet['bonus_wallet'], false, 'Non-Withdrawable', Colors.amber),
-          
           if (!isVendor) ...[
+            _buildWalletRow(Icons.account_balance_wallet, 'Main Wallet (JC)', multiWallet['main_wallet'], true, 'Withdrawable (Purchased JC)', Colors.blue),
+            _buildWalletRow(Icons.lock_clock, '90 Days Lock Wallet', multiWallet['lock_90d_wallet'], false, 'Non-Withdrawable (Unlocks in 90 Days)', Colors.orange),
+            _buildWalletRow(Icons.group_add, 'Referral Reward Wallet', multiWallet['referral_wallet'], false, 'Non-Withdrawable', Colors.green),
+            _buildWalletRow(Icons.card_giftcard, 'Cashback Wallet', multiWallet['cashback_wallet'], false, 'Non-Withdrawable', Colors.purple),
+            _buildWalletRow(Icons.stars, 'Bonus Wallet', multiWallet['bonus_wallet'], false, 'Non-Withdrawable', Colors.amber),
             _buildWalletRow(Icons.account_tree, 'Level Income Wallet', multiWallet['level_income_wallet'], false, 'Non-Withdrawable', Colors.redAccent),
             if ((multiWallet['staking_wallet'] ?? 0) > 0)
               _buildWalletRow(Icons.savings, 'Staking Wallet', multiWallet['staking_wallet'], false, 'Non-Withdrawable (Staked)', Colors.teal),
