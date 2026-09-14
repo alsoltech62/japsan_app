@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "419471403975",
+    "project_id": "gold-5bc30",
+    "storage_bucket": "gold-5bc30.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:419471403975:android:c066ead8cc7542353347e2",
+        "android_client_info": {
+          "package_name": "com.example.goldapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAZPGCxKpNbi28psZtLI-mFt5dLiv98qxw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:419471403975:android:e537b606fc0264873347e2",
+        "android_client_info": {
+          "package_name": "com.japsan.goldbarpay"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAZPGCxKpNbi28psZtLI-mFt5dLiv98qxw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:419471403975:android:ba3a85766a9c45b33347e2",
+        "android_client_info": {
+          "package_name": "com.japsanpay.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAZPGCxKpNbi28psZtLI-mFt5dLiv98qxw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
