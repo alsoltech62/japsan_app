@@ -150,6 +150,9 @@ class _LoginScreenState extends State<LoginScreen> {
       _userType,
       name: _nameController.text.isNotEmpty ? _nameController.text : null,
       referralCode: _referralController.text.isNotEmpty ? _referralController.text : null,
+      businessName: (_userType == 'vendor' && _nameController.text.isNotEmpty) ? _nameController.text : null,
+      city: null,
+      ownerName: (_userType == 'vendor' && _nameController.text.isNotEmpty) ? _nameController.text : null,
     );
     if (!mounted) return;
     if (res['success'] != true) {
@@ -257,15 +260,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ).animate().fade(delay: 400.ms).slideX(begin: 0.1),
 
-                if (_userType == 'user' && !_otpSent) ...[
+                if (!_otpSent) ...[
                   const SizedBox(height: 16),
                   TextField(
                     controller: _nameController,
                     enabled: !isLoading,
                     style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16),
-                    decoration: const InputDecoration(
-                      labelText: 'Full Name (Optional for existing users)',
-                      prefixIcon: Icon(Icons.person),
+                    decoration: InputDecoration(
+                      labelText: _userType == 'vendor' 
+                        ? 'Business Name (Optional for existing vendors)' 
+                        : 'Full Name (Optional for existing users)',
+                      prefixIcon: Icon(_userType == 'vendor' ? Icons.storefront : Icons.person),
                     ),
                   ).animate().fade(delay: 450.ms).slideX(begin: 0.1),
                   const SizedBox(height: 16),

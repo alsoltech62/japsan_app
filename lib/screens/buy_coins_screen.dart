@@ -116,10 +116,10 @@ class _BuyCoinsScreenState extends State<BuyCoinsScreen> {
   int get _total => _coins + _bonus;
 
   Future<void> _buyCoins() async {
-    if (_coins < 10) {
+    if (_coins < 100) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Enter at least 10 coins')));
+      ).showSnackBar(const SnackBar(content: Text('Minimum purchase is 100 coins (₹100)')));
       return;
     }
 
@@ -134,12 +134,21 @@ class _BuyCoinsScreenState extends State<BuyCoinsScreen> {
 
     if (orderRes['success'] == true) {
       final orderData = orderRes['data'];
+      final profile = context.read<ApiService>().userProfile;
+      final userPhone = profile?['phone']?.toString() ?? '';
+      final userEmail = profile?['email']?.toString() ?? 'user@japsanpay.com';
+
+      final cleanPhone = userPhone.replaceAll(RegExp(r'\D'), '');
+      final contactNum = cleanPhone.length >= 10 ? cleanPhone.substring(cleanPhone.length - 10) : cleanPhone;
+
       var options = {
-        'key': 'rzp_live_TN8KciymYkApmH',
+        'key': orderData['key_id'] ?? 'rzp_live_TN8KciymYkApmH',
+        'amount': orderData['amount'] ?? (_coins * 100),
+        'currency': 'INR',
         'name': 'Japsan Pay',
         'description': 'Purchase of $_coins coins',
         'order_id': orderData['order_id'],
-        'prefill': {'contact': '9999999999', 'email': 'user@example.com'},
+        'prefill': {'contact': contactNum.isNotEmpty ? contactNum : '9999999999', 'email': userEmail},
         'theme': {'color': '#f97316'},
       };
 
@@ -390,7 +399,7 @@ class _BuyCoinsScreenState extends State<BuyCoinsScreen> {
                 setState(() {}); // Update total
             },
             decoration: InputDecoration(
-              hintText: 'Enter coins (min 10)',
+              hintText: 'Enter coins (min 100)',
               hintStyle: const TextStyle(color: AppTheme.textLight),
               filled: true,
               fillColor: AppTheme.secondaryBackground,

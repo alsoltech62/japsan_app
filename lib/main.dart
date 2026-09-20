@@ -10,15 +10,16 @@ import 'screens/app_lock_screen.dart';
 import 'package:firebase_core/firebase_core.dart' hide FirebaseService;
 import 'core/firebase_service.dart';
 
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   try {
     await Firebase.initializeApp();
-    await FirebaseService.initialize();
+    await FirebaseService.initialize(navKey: appNavigatorKey);
   } catch (e) {
     debugPrint('Firebase initialization failed: $e');
-    // Note: User needs to add google-services.json to android/app and configured for iOS
   }
   
   // Log Facebook activated app event
@@ -41,6 +42,7 @@ class JapsanPayApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Japsan Pay Ecosystem',
+      navigatorKey: appNavigatorKey,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       home: Consumer<ApiService>(

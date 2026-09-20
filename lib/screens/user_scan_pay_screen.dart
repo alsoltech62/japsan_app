@@ -172,12 +172,13 @@ class _UserScanPayScreenState extends State<UserScanPayScreen> {
         final orderData = orderRes['data'];
         final user = context.read<ApiService>().userProfile;
         var options = {
-          'key': 'rzp_live_TN8KciymYkApmH',
+          'key': orderData['key_id'] ?? 'rzp_live_TN8KciymYkApmH',
           'amount': orderData['amount'],
-          'name': 'Japsan Pay',
+          'currency': 'INR',
+          'name': _vendorDetails?['business_name'] ?? 'Japsan Pay',
           'description': 'Payment to Vendor',
           'order_id': orderData['order_id'],
-          'prefill': {'contact': user?['phone'] ?? '', 'email': ''},
+          'prefill': {'contact': user?['phone'] ?? '', 'email': user?['email'] ?? 'customer@japsanpay.com'},
           'theme': {'color': '#f97316'},
         };
         try {

@@ -92,6 +92,9 @@ class ApiService extends ChangeNotifier {
     String purpose = 'login',
     String? name,
     String? referralCode,
+    String? businessName,
+    String? city,
+    String? ownerName,
   }) async {
     _setLoading(true);
     try {
@@ -103,6 +106,9 @@ class ApiService extends ChangeNotifier {
       };
       if (name != null) bodyData['name'] = name;
       if (referralCode != null) bodyData['referral_code'] = referralCode;
+      if (businessName != null) bodyData['business_name'] = businessName;
+      if (city != null) bodyData['city'] = city;
+      if (ownerName != null) bodyData['owner_name'] = ownerName;
 
       final response = await http.post(
         Uri.parse('$baseUrl/auth/verify_otp.php'),
@@ -194,11 +200,55 @@ class ApiService extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> getUserOffers(double lat, double lng) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/users/offers.php?lat=$lat&lng=$lng'),
+        headers: _getHeaders(),
+      );
+      return json.decode(response.body);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> getVendorAdStatus() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/vendors/advertising.php'),
+        headers: _getHeaders(),
+      );
+      return json.decode(response.body);
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> buyVendorAd(int days, {String paymentMethod = 'coins'}) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/vendors/advertising.php'),
+        headers: _getHeaders(),
+        body: json.encode({
+          'days': days,
+          'payment_method': paymentMethod,
+        }),
+      );
+      final res = json.decode(response.body);
+      if (res['success'] == true) {
+        await refreshProfile();
+      }
+      return res;
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
   Future<Map<String, dynamic>> getNetwork() async {
     try {
       final response = await http.get(
         Uri.parse('$baseUrl/network/dashboard.php'),
-        headers: await _getHeaders(),
+        headers: _getHeaders(),
       );
       return json.decode(response.body);
     } catch (e) {
@@ -554,7 +604,7 @@ class ApiService extends ChangeNotifier {
     try {
       final uri = Uri.parse('$baseUrl/notifications/list.php').replace(queryParameters: params);
       final response = await http.get(uri, headers: _getHeaders());
-      return json.decode(response.body);
+      return json.decode(utf8.decode(response.bodyBytes));
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -567,7 +617,19 @@ class ApiService extends ChangeNotifier {
         headers: _getHeaders(),
         body: json.encode(data),
       );
-      return json.decode(response.body);
+      return json.decode(utf8.decode(response.bodyBytes));
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  Future<Map<String, dynamic>> getBanners() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/banners/list.php?_t=${DateTime.now().millisecondsSinceEpoch}'),
+        headers: _getHeaders(),
+      );
+      return json.decode(utf8.decode(response.bodyBytes));
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }

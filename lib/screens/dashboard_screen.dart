@@ -19,8 +19,9 @@ import 'vendor_qr_screen.dart';
 import 'buy_coins_screen.dart';
 import 'cash_wallet_screen.dart';
 import 'notifications_screen.dart';
-import 'vendor_roi_screen.dart';
 import 'user_withdraw_screen.dart';
+import 'user_offers_screen.dart';
+import 'vendor_advertising_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -158,10 +159,13 @@ class UserDashboard extends StatefulWidget {
 
 class _UserDashboardState extends State<UserDashboard> {
   Map<String, dynamic>? walletData;
+  Map<String, dynamic>? _latestNotif;
+  bool _showNotifAlert = true;
   bool isLoading = true;
   final PageController _pageController = PageController();
   Timer? _bannerTimer;
-  final List<String> _banners = [
+  List<Map<String, dynamic>> _dynamicBanners = [];
+  final List<String> _fallbackBanners = [
     'assets/ba1.jpeg',
     'assets/ba2.jpeg',
     'assets/ba3.jpeg'
@@ -171,11 +175,16 @@ class _UserDashboardState extends State<UserDashboard> {
   void initState() {
     super.initState();
     _fetchBalance();
+    _fetchBanners();
+    _fetchLatestNotification();
     _bannerTimer = Timer.periodic(const Duration(seconds: 5), (Timer timer) {
       if (_pageController.hasClients) {
-        int nextPage = _pageController.page!.round() + 1;
-        if (nextPage >= _banners.length) nextPage = 0;
-        _pageController.animateToPage(nextPage, duration: const Duration(milliseconds: 300), curve: Curves.easeIn);
+        final totalCount = _dynamicBanners.isNotEmpty ? _dynamicBanners.length : _fallbackBanners.length;
+        if (totalCount > 1) {
+          int nextPage = (_pageController.page?.round() ?? 0) + 1;
+          if (nextPage >= totalCount) nextPage = 0;
+          _pageController.animateToPage(nextPage, duration: const Duration(milliseconds: 300), curve: Curves.easeIn);
+        }
       }
     });
   }
@@ -196,6 +205,153 @@ class _UserDashboardState extends State<UserDashboard> {
     if(mounted) setState(() => isLoading = false);
   }
 
+  Future<void> _fetchBanners() async {
+    final api = context.read<ApiService>();
+    final res = await api.getBanners();
+    if (res['success'] == true && res['data']?['banners'] != null) {
+      final List list = res['data']['banners'];
+      if (list.isNotEmpty && mounted) {
+        setState(() {
+          _dynamicBanners = list.map((e) => Map<String, dynamic>.from(e)).toList();
+        });
+      }
+    }
+  }
+
+  Future<void> _fetchLatestNotification() async {
+    final api = context.read<ApiService>();
+    final res = await api.getNotifications(params: {'limit': '1'});
+    if (res['success'] == true && res['data']?['notifications'] != null) {
+      final List list = res['data']['notifications'];
+      if (list.isNotEmpty && mounted) {
+        final first = list.first;
+        final isRead = first['is_read'] == 1 || first['is_read'] == true;
+        if (!isRead) {
+          setState(() {
+            _latestNotif = first;
+            _showNotifAlert = true;
+          });
+        }
+      }
+    }
+  }
+
+  void _showNotificationDetailModal(BuildContext context, dynamic notif, VoidCallback onDismiss) {
+    final rawMsg = notif['message'] ?? '';
+    final cleanMsg = rawMsg.replaceAll(RegExp(r'\[IMG:.+?\]'), '').trim();
+    String? imgUrl;
+    if (notif['image_url'] != null && notif['image_url'].toString().trim().isNotEmpty) {
+      imgUrl = notif['image_url'].toString().trim();
+    } else if (notif['image'] != null && notif['image'].toString().trim().isNotEmpty) {
+      imgUrl = notif['image'].toString().trim();
+    } else {
+      final regExp = RegExp(r'\[IMG:(.+?)\]');
+      final match = regExp.firstMatch(rawMsg);
+      if (match != null && match.groupCount >= 1) {
+        imgUrl = match.group(1)!.trim();
+      }
+    }
+
+    if (imgUrl != null && !imgUrl.startsWith('http')) {
+      String p = imgUrl.startsWith('/') ? imgUrl.substring(1) : imgUrl;
+      imgUrl = p.startsWith('backend/') ? 'https://japsanpay.com/$p' : 'https://japsanpay.com/backend/$p';
+    }
+
+    if (notif['id'] != null) {
+      context.read<ApiService>().markNotifRead({'notification_id': notif['id']});
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+        contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.amber.withAlpha(30),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.notifications_active, color: Colors.amber, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                notif['title'] ?? 'Notification',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E293B)),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, size: 20, color: Colors.grey),
+              onPressed: () => Navigator.pop(ctx),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (imgUrl != null && imgUrl.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.network(
+                    imgUrl,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return Container(
+                        height: 160,
+                        color: Colors.grey.shade100,
+                        child: const Center(child: CircularProgressIndicator(color: Colors.amber)),
+                      );
+                    },
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              Text(
+                cleanMsg,
+                style: const TextStyle(fontSize: 14, color: Color(0xFF475569), height: 1.4),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              onDismiss();
+            },
+            child: const Text('Dismiss', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              onDismiss();
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryNavy,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('View All Notifications'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final balanceStr = walletData?['wallet']?['coin_balance']?.toString() ?? '0';
@@ -203,33 +359,125 @@ class _UserDashboardState extends State<UserDashboard> {
     final rateStr = walletData?['redemption_rate']?.toString() ?? '0.7';
     final rate = double.tryParse(rateStr) ?? 0.7;
     final estValue = (balance * rate).toStringAsFixed(2);
+    final hasDynamic = _dynamicBanners.isNotEmpty;
+    final bannerCount = hasDynamic ? _dynamicBanners.length : _fallbackBanners.length;
     
     return ListView(
       padding: const EdgeInsets.all(16),
       physics: const BouncingScrollPhysics(),
       children: [
+        // Dismissible Top Notification Alert Banner (Same as Web)
+        if (_latestNotif != null && _showNotifAlert) ...[
+          Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFFFF7ED), Color(0xFFFEF3C7)],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFFDE68A)),
+              boxShadow: [
+                BoxShadow(color: Colors.orange.withAlpha(20), blurRadius: 8, offset: const Offset(0, 2)),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF59E0B),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.notifications_active, color: Colors.white, size: 16),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      _showNotificationDetailModal(context, _latestNotif!, () {
+                        if (mounted) setState(() => _showNotifAlert = false);
+                      });
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _latestNotif!['title'] ?? 'New Notification',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF92400E)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          (_latestNotif!['message'] ?? '').replaceAll(RegExp(r'\[IMG:.+?\]'), '').trim(),
+                          style: const TextStyle(fontSize: 11, color: Color(0xFFB45309)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 18, color: Color(0xFF92400E)),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () {
+                    setState(() => _showNotifAlert = false);
+                  },
+                ),
+              ],
+            ),
+          ).animate().slideY(begin: -0.2, end: 0).fade(),
+        ],
+
         _buildUserBalanceCard(context, '$balanceStr', estValue),
         const SizedBox(height: 24),
         // Main Promotional Banner
         SizedBox(
-          height: 120,
+          height: 130,
           child: PageView.builder(
             controller: _pageController,
-            itemCount: _banners.length,
+            itemCount: bannerCount,
             itemBuilder: (context, index) {
-              return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  image: DecorationImage(
-                    image: AssetImage(_banners[index]),
-                    fit: BoxFit.fill,
+              if (hasDynamic) {
+                final b = _dynamicBanners[index];
+                final imgUrl = b['full_image_url'] ?? b['image_url'] ?? '';
+                return Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 10, offset: const Offset(0, 4)),
+                    ],
                   ),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 10, offset: const Offset(0, 4)),
-                  ],
-                ),
-              );
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.network(
+                      imgUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Image.asset(
+                        _fallbackBanners[index % _fallbackBanners.length],
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                );
+              } else {
+                return Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    image: DecorationImage(
+                      image: AssetImage(_fallbackBanners[index]),
+                      fit: BoxFit.fill,
+                    ),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 10, offset: const Offset(0, 4)),
+                    ],
+                  ),
+                );
+              }
             },
           ),
         ).animate().fade().scale(),
@@ -294,9 +542,10 @@ class _UserDashboardState extends State<UserDashboard> {
           physics: const NeverScrollableScrollPhysics(),
           childAspectRatio: 0.9,
           children: [
+            _buildQuickAccess(context, Icons.storefront, 'Nearby Stores', const NearbyVendorsScreen()),
+            _buildQuickAccess(context, Icons.local_offer, 'Hot Offers', const UserOffersScreen()),
             _buildQuickAccess(context, Icons.account_balance, 'Withdraw', const UserWithdrawScreen()),
             _buildQuickAccess(context, Icons.card_giftcard_outlined, 'Refer & Earn', const ReferralScreen()),
-            _buildQuickAccess(context, Icons.local_offer_outlined, 'Nearby Offers', const NearbyVendorsScreen()),
             _buildQuickAccess(context, Icons.verified_user_outlined, 'KYC', const ProfileScreen()),
             _buildQuickAccess(context, Icons.help_outline, 'Help Center', const ProfileScreen()),
           ],
@@ -478,12 +727,15 @@ class VendorDashboard extends StatefulWidget {
 
 class _VendorDashboardState extends State<VendorDashboard> {
   Map<String, dynamic>? data;
+  Map<String, dynamic>? _latestNotif;
+  bool _showNotifAlert = true;
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _fetchData();
+    _fetchLatestNotification();
   }
 
   Future<void> _fetchData() async {
@@ -493,6 +745,140 @@ class _VendorDashboardState extends State<VendorDashboard> {
       if(mounted) setState(() => data = res['data']);
     }
     if(mounted) setState(() => isLoading = false);
+  }
+
+  Future<void> _fetchLatestNotification() async {
+    final api = context.read<ApiService>();
+    final res = await api.getNotifications(params: {'limit': '1'});
+    if (res['success'] == true && res['data']?['notifications'] != null) {
+      final List list = res['data']['notifications'];
+      if (list.isNotEmpty && mounted) {
+        final first = list.first;
+        final isRead = first['is_read'] == 1 || first['is_read'] == true;
+        if (!isRead) {
+          setState(() {
+            _latestNotif = first;
+            _showNotifAlert = true;
+          });
+        }
+      }
+    }
+  }
+
+  void _showNotificationDetailModal(BuildContext context, dynamic notif, VoidCallback onDismiss) {
+    final rawMsg = notif['message'] ?? '';
+    final cleanMsg = rawMsg.replaceAll(RegExp(r'\[IMG:.+?\]'), '').trim();
+    String? imgUrl;
+    if (notif['image_url'] != null && notif['image_url'].toString().trim().isNotEmpty) {
+      imgUrl = notif['image_url'].toString().trim();
+    } else if (notif['image'] != null && notif['image'].toString().trim().isNotEmpty) {
+      imgUrl = notif['image'].toString().trim();
+    } else {
+      final regExp = RegExp(r'\[IMG:(.+?)\]');
+      final match = regExp.firstMatch(rawMsg);
+      if (match != null && match.groupCount >= 1) {
+        imgUrl = match.group(1)!.trim();
+      }
+    }
+
+    if (imgUrl != null && !imgUrl.startsWith('http')) {
+      String p = imgUrl.startsWith('/') ? imgUrl.substring(1) : imgUrl;
+      imgUrl = p.startsWith('backend/') ? 'https://japsanpay.com/$p' : 'https://japsanpay.com/backend/$p';
+    }
+
+    if (notif['id'] != null) {
+      context.read<ApiService>().markNotifRead({'notification_id': notif['id']});
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+        contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.amber.withAlpha(30),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.notifications_active, color: Colors.amber, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                notif['title'] ?? 'Notification',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E293B)),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, size: 20, color: Colors.grey),
+              onPressed: () => Navigator.pop(ctx),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (imgUrl != null && imgUrl.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.network(
+                    imgUrl,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return Container(
+                        height: 160,
+                        color: Colors.grey.shade100,
+                        child: const Center(child: CircularProgressIndicator(color: Colors.amber)),
+                      );
+                    },
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              Text(
+                cleanMsg,
+                style: const TextStyle(fontSize: 14, color: Color(0xFF475569), height: 1.4),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              onDismiss();
+            },
+            child: const Text('Dismiss', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              onDismiss();
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryNavy,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('View All Notifications'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -515,6 +901,71 @@ class _VendorDashboardState extends State<VendorDashboard> {
       padding: const EdgeInsets.all(16),
       physics: const BouncingScrollPhysics(),
       children: [
+        // Dismissible Top Notification Alert Banner (Same as Web)
+        if (_latestNotif != null && _showNotifAlert) ...[
+          Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFFFF7ED), Color(0xFFFEF3C7)],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFFDE68A)),
+              boxShadow: [
+                BoxShadow(color: Colors.orange.withAlpha(20), blurRadius: 8, offset: const Offset(0, 2)),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF59E0B),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.notifications_active, color: Colors.white, size: 16),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      _showNotificationDetailModal(context, _latestNotif!, () {
+                        if (mounted) setState(() => _showNotifAlert = false);
+                      });
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _latestNotif!['title'] ?? 'New Notification',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF92400E)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          (_latestNotif!['message'] ?? '').replaceAll(RegExp(r'\[IMG:.+?\]'), '').trim(),
+                          style: const TextStyle(fontSize: 11, color: Color(0xFFB45309)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 18, color: Color(0xFF92400E)),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () {
+                    setState(() => _showNotifAlert = false);
+                  },
+                ),
+              ],
+            ),
+          ).animate().slideY(begin: -0.2, end: 0).fade(),
+        ],
+
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -571,15 +1022,15 @@ class _VendorDashboardState extends State<VendorDashboard> {
           physics: const NeverScrollableScrollPhysics(),
           childAspectRatio: 0.9,
           children: [
-            _buildQuickAccess(context, Icons.person_outline, 'Profile', const ProfileScreen()),
+            _buildQuickAccess(context, Icons.rocket_launch, 'Boost (Top 1-3)', const VendorAdvertisingScreen()),
             _buildQuickAccess(context, Icons.point_of_sale, 'Bill Customer', const VendorScanCustomerScreen()),
             _buildQuickAccess(context, Icons.qr_code, 'Show QR', const VendorQrScreen()),
-            _buildQuickAccess(context, Icons.account_balance_wallet, 'Buy Coins', const BuyCoinsScreen()),
-            _buildQuickAccess(context, Icons.account_balance, 'Withdraw', const VendorWithdrawScreen()),
-            _buildQuickAccess(context, Icons.settings_outlined, 'Rewards', const VendorRewardSettingsScreen()),
             _buildQuickAccess(context, Icons.local_offer_outlined, 'Offers', const VendorOffersScreen()),
+            _buildQuickAccess(context, Icons.account_balance, 'Withdraw', const VendorWithdrawScreen()),
+            _buildQuickAccess(context, Icons.account_balance_wallet, 'Buy Coins', const BuyCoinsScreen()),
+            _buildQuickAccess(context, Icons.settings_outlined, 'Rewards', const VendorRewardSettingsScreen()),
             _buildQuickAccess(context, Icons.campaign_outlined, 'Campaigns', const VendorCampaignsScreen()),
-            _buildQuickAccess(context, Icons.share_outlined, 'Refer', const ReferralScreen()),
+            _buildQuickAccess(context, Icons.person_outline, 'Profile', const ProfileScreen()),
           ],
         ),
         const SizedBox(height: 24),

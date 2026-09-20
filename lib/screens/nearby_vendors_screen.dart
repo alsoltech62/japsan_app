@@ -75,6 +75,7 @@ class _NearbyVendorsScreenState extends State<NearbyVendorsScreen> {
               itemCount: vendors.length,
               itemBuilder: (context, index) {
                 final v = vendors[index];
+                final isSponsored = v['is_sponsored_active'] == true || v['is_sponsored'] == true || v['is_sponsored'] == 1;
                 return GestureDetector(
                   onTap: () => _showVendorDetails(context, v),
                   child: Card(
@@ -83,13 +84,43 @@ class _NearbyVendorsScreenState extends State<NearbyVendorsScreen> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                       side: BorderSide(
-                        color: AppTheme.primaryGold.withAlpha(30),
+                        color: isSponsored ? AppTheme.primaryGold : AppTheme.primaryGold.withAlpha(30),
+                        width: isSponsored ? 1.5 : 1,
                       ),
                     ),
-                    elevation: 4,
+                    elevation: isSponsored ? 6 : 4,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if (isSponsored)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Color(0xFFD4AF37), Color(0xFFFFD700)],
+                              ),
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(16),
+                                topRight: Radius.circular(16),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.star, color: Colors.black, size: 14),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '👑 TOP FEATURED #${index + 1}',
+                                  style: const TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         Padding(
                           padding: const EdgeInsets.all(12),
                           child: Row(
